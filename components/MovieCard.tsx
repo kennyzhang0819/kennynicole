@@ -51,6 +51,7 @@ export default function MovieCard({
 
   const handleToggleWatched = (selectedUsers: string[]) => {
     onToggleWatched?.(movie.id, selectedUsers);
+    movie.watched_by = selectedUsers;
   };
 
   const handleToggleToWatch = () => {
