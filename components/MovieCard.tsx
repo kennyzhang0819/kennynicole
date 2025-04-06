@@ -27,6 +27,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import Image from "next/image";
 
 interface MovieCardProps {
   movie: Movie;
@@ -61,10 +62,12 @@ export default function MovieCard({
       <CardContent className="p-0">
         <div className="aspect-square w-full overflow-hidden">
           {movie.image_url ? (
-            <img 
+            <Image 
               src={movie.image_url} 
               alt={movie.title}
               className="h-full w-full object-cover"
+              width={120}
+              height={120}
             />
           ) : (
             <div className="h-full w-full bg-muted flex items-center justify-center">
@@ -78,7 +81,7 @@ export default function MovieCard({
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <h4 className="font-medium text-xs line-clamp-1">{movie.title}</h4>
+                <h4 className="font-medium text-xs line-clamp-2">{movie.title}</h4>
               </TooltipTrigger>
               <TooltipContent>
                 <p>{movie.title}</p>
@@ -86,9 +89,6 @@ export default function MovieCard({
             </Tooltip>
           </TooltipProvider>
           <p className="text-xs text-muted-foreground">{movie.year}</p>
-          {movie.runtime && (
-            <p className="text-xs text-muted-foreground">{movie.runtime}</p>
-          )}
           {isSharedLayout && (
             <div className="mt-1 flex items-center gap-2">
               <DropdownMenu>

@@ -17,6 +17,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import Image from 'next/image';
+import AllMoviesSection from './AllMoviesSection';
 
 interface OmdbMovie {
   Title: string;
@@ -92,31 +94,54 @@ export default function MovieList() {
     
     try {
       const apiKey = process.env.NEXT_PUBLIC_MOVIE_API_KEY;
-      const searchResponse = await fetch(`https://www.omdbapi.com/?s=${encodeURIComponent(searchQuery)}&apikey=${apiKey}`);
-      const data = await searchResponse.json() as OmdbSearchResponse;
       
-      if (data.Response === 'True') {
-        // Fetch additional details for each movie
-        const detailedMovies = await Promise.all(
-          data.Search.map(async (movie) => {
-            const detailsResponse = await fetch(`https://www.omdbapi.com/?i=${movie.imdbID}&apikey=${apiKey}`);
-            const details = await detailsResponse.json() as OmdbMovieDetails;
-            
-            if (details.Response === 'True') {
-              return {
-                ...movie,
-                Runtime: details.Runtime,
-                Director: details.Director,
-                Genre: details.Genre
-              };
-            }
-            return movie;
-          })
-        );
+      // Check if the search query is an IMDb ID (starts with 'tt' followed by numbers)
+      if (searchQuery.match(/^tt\d+$/)) {
+        const response = await fetch(`https://www.omdbapi.com/?i=${searchQuery}&apikey=${apiKey}`);
+        const movie = await response.json() as OmdbMovieDetails & OmdbMovie;
         
-        setSearchResults(detailedMovies);
+        if (movie.Response === 'True') {
+          setSearchResults([{
+            Title: movie.Title,
+            Year: movie.Year,
+            imdbID: movie.imdbID,
+            Type: movie.Type,
+            Poster: movie.Poster,
+            Runtime: movie.Runtime,
+            Director: movie.Director,
+            Genre: movie.Genre
+          }]);
+        } else {
+          setError(movie.Error || 'Movie not found');
+        }
       } else {
-        setError(data.Error || 'No movies found. Try another search term.');
+        // Regular title search
+        const searchResponse = await fetch(`https://www.omdbapi.com/?s=${encodeURIComponent(searchQuery)}&apikey=${apiKey}`);
+        const data = await searchResponse.json() as OmdbSearchResponse;
+        
+        if (data.Response === 'True') {
+          // Fetch additional details for each movie
+          const detailedMovies = await Promise.all(
+            data.Search.map(async (movie) => {
+              const detailsResponse = await fetch(`https://www.omdbapi.com/?i=${movie.imdbID}&apikey=${apiKey}`);
+              const details = await detailsResponse.json() as OmdbMovieDetails;
+              
+              if (details.Response === 'True') {
+                return {
+                  ...movie,
+                  Runtime: details.Runtime,
+                  Director: details.Director,
+                  Genre: details.Genre
+                };
+              }
+              return movie;
+            })
+          );
+          
+          setSearchResults(detailedMovies);
+        } else {
+          setError(data.Error || 'No movies found. Try another search term.');
+        }
       }
     } catch (err) {
       setError('Failed to fetch movies. Please try again.');
@@ -270,7 +295,7 @@ export default function MovieList() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyDown={handleSearchKeyDown}
-                placeholder="Search for movies..."
+                placeholder="Search by title or imdb id"
               />
             </div>
             
@@ -305,10 +330,12 @@ export default function MovieList() {
                       <CardContent className="p-0">
                         <div className="aspect-square w-full overflow-hidden">
                           {movie.Poster && movie.Poster !== 'N/A' ? (
-                            <img 
+                            <Image 
                               src={movie.Poster} 
                               alt={movie.Title}
                               className="h-full w-full object-cover" 
+                              width={120}
+                              height={120}
                             />
                           ) : (
                             <div className="h-full w-full bg-muted flex items-center justify-center">
@@ -319,7 +346,7 @@ export default function MovieList() {
                       </CardContent>
                       <CardContent className="p-2">
                         <div className="w-full">
-                          <h4 className="font-medium text-xs line-clamp-1">{movie.Title}</h4>
+                          <h4 className="font-medium text-xs line-clamp-2">{movie.Title}</h4>
                           <p className="text-xs text-muted-foreground">{movie.Year}</p>
                           <p className="text-xs text-primary mt-1">Click to add</p>
                         </div>
@@ -361,22 +388,15 @@ export default function MovieList() {
 
             <Separator />
 
-            {/* Watched Movies Section */}
+            {/* All Movies Section */}
             <div>
-              <h3 className="text-lg font-semibold mb-4">Watched</h3>
-              <div className="flex flex-wrap gap-4 justify-center">
-                {movies.filter(movie => (movie.watched_by || []).includes('kenny')).map((movie) => (
-                  <MovieCard
-                    key={movie.id}
-                    movie={movie}
-                    onToggleWatched={toggleWatched}
-                    onDelete={deleteMovie}
-                    isUpdating={isUpdating}
-                    isSharedLayout={true}
-                    onToggleToWatch={toggleToWatch}
-                  />
-                ))}
-              </div>
+              <h3 className="text-lg font-semibold mb-4">All Movies</h3>
+              <AllMoviesSection
+                onToggleWatched={toggleWatched}
+                onDelete={deleteMovie}
+                isUpdating={isUpdating}
+                onToggleToWatch={toggleToWatch}
+              />
             </div>
           </div>
         ) : (
